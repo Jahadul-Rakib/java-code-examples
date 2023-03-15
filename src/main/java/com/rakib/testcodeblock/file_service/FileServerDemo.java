@@ -13,13 +13,11 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/v1/file")
 public class FileServerDemo {
-    private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
     private final String filePath = "src/main/resources/files/";
 
     @PostMapping
@@ -48,30 +46,30 @@ public class FileServerDemo {
         }
     }
 
+
     @GetMapping(value = "/stream/{file-name}")
-    public void getFileStream(@PathVariable(value = "file-name") String fileName, HttpServletResponse response) throws Exception {
-        Path filePath = Path.of(this.filePath + fileName);
-        boolean exists = Files.exists(filePath);
-        if (!exists) throw new Exception("file not found");
+    public CompletableFuture<Void> getFileStream(HttpServletResponse response, @PathVariable(value = "file-name") String fileName) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                Path filePath = Path.of(this.filePath + fileName);
+                boolean exists = Files.exists(filePath);
+                if (!exists) throw new Exception("file not found by " + fileName);
 
-        Thread thread = new Thread(() -> sendFileByteStreamToResponse(fileName, filePath, response));
-        thread.start();
-        thread.join();
-    }
+                System.out.println("----start----");
+                InputStream input = new FileInputStream(filePath.toFile());
 
-    private static void sendFileByteStreamToResponse(String fileName, Path filePath, HttpServletResponse response) {
-        try (InputStream input = new FileInputStream(filePath.toFile())) {
-            System.out.println("start");
+                response.addHeader("Content-disposition", "attachment;filename=" + fileName);
+                response.setContentType(Files.probeContentType(filePath));
 
-            response.addHeader("Content-disposition", "attachment;filename=" + fileName);
-            response.setContentType(Files.probeContentType(filePath));
+                IOUtils.copyLarge(input, response.getOutputStream());
+                response.flushBuffer();
+                input.close();
 
-            IOUtils.copy(input, response.getOutputStream());
-            response.flushBuffer();
-
-            System.out.println("done");
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
+                System.out.println("----finish----");
+            } catch (Exception e) {
+                throw new RuntimeException(e.getMessage());
+            }
+        });
     }
 }
+
