@@ -1,7 +1,6 @@
 package com.rakib.testcodeblock.file_service;
 
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.ResponseEntity;
@@ -56,15 +55,14 @@ public class FileServerDemo {
                 if (!exists) throw new Exception("file not found by " + fileName);
 
                 System.out.println("----start----");
-                InputStream input = new FileInputStream(filePath.toFile());
-
                 response.addHeader("Content-disposition", "attachment;filename=" + fileName);
                 response.setContentType(Files.probeContentType(filePath));
 
-                IOUtils.copyLarge(input, response.getOutputStream());
-                response.flushBuffer();
+                InputStream input = new FileInputStream(filePath.toFile());
+                input.transferTo(response.getOutputStream());
                 input.close();
 
+                response.flushBuffer();
                 System.out.println("----finish----");
             } catch (Exception e) {
                 throw new RuntimeException(e.getMessage());
