@@ -54,12 +54,12 @@ public class FileServerDemo {
         boolean exists = Files.exists(filePath);
         if (!exists) throw new Exception("file not found");
 
-        Thread thread = new Thread(() -> sendFileByteStreamToResponse(fileName, response, filePath));
+        Thread thread = new Thread(() -> sendFileByteStreamToResponse(fileName, filePath, response));
         thread.start();
         thread.join();
     }
 
-    private static void sendFileByteStreamToResponse(String fileName, HttpServletResponse response, Path filePath) {
+    private static void sendFileByteStreamToResponse(String fileName, Path filePath, HttpServletResponse response) {
         try (InputStream input = new FileInputStream(filePath.toFile())) {
             System.out.println("start");
 
